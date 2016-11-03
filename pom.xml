@@ -13,16 +13,16 @@
 	</parent>
 
 	<groupId>sc.fiji</groupId>
-	<artifactId>Process_Pixels</artifactId>
+	<artifactId>Cluster_Groundtruth_Generation</artifactId>
 	<version>0.1.0-SNAPSHOT</version>
 
-	<name>plugins/Process_Pixels.jar</name>
+	<name>plugins/Cluster_Groundtruth_Generation.jar</name>
 	<description>A Maven project implementing an ImageJ 1.x plugin</description>
 
 	<developers>
 		<developer>
 			<id>dscho</id>
-			<name>Johannes Schindelin</name>
+			<name>Mathis</name>
 			<email>johannes.schindelin@gmx.de</email>
 			<url>http://loci.wisc.edu/people/johannes-schindelin</url>
 			<organization>UW-Madison LOCI</organization>
@@ -43,7 +43,7 @@
 	</scm>
 
 	<properties>
-		<main-class>Process_Pixels</main-class>
+		<main-class>Cluster_Groundtruth_Generation</main-class>
 	</properties>
 
 	<dependencies>
