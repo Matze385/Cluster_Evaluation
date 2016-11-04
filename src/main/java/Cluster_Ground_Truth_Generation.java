@@ -7,29 +7,53 @@
  */
 
 import ij.IJ;
+import ij.ImageStack;
 import ij.ImageJ;
 import ij.ImagePlus;
-import ij.gui.GenericDialog;
+//import ij.gui.GenericDialog;
 import ij.plugin.filter.PlugInFilter;
-import ij.process.ImageProcessor;
+import ij.process.*;
+import ij.gui.*;
+//import ij.gui.WaitForUserDialog;
+import java.awt.Rectangle;
+import java.awt.event.*;
+import java.awt.Point;
+import java.awt.Color;
 
 /**
  * ProcessPixels
  *
- * A template for processing each pixel of either
+ * A template for annotating ground truth for cluster resolving 
  * GRAY8, GRAY16, GRAY32 or COLOR_RGB images.
  *
  * @author The Fiji Team
  */
-public class Cluster_Ground_Truth_Generation implements PlugInFilter {
+public class Cluster_Ground_Truth_Generation implements PlugInFilter, MouseListener {
 	protected ImagePlus image;
+        protected ImageCanvas canvas;
 
-	// image property members
+	// image/stack property members
 	private int width;
 	private int height;
+        private int interval;
+    
+        /*-------------------
+        Cluster information
+        -------------------*/
+        //chosen interval
+        private boolean intervalSet = false;
+        private int startFrame;
+        private int endFrame;
+        
+        // Region of interest
+        private Roi roi;
+        private boolean roiSelected = false;
+
+        //save click events
+        private boolean click = false;
+        private Point clickPoint = new Point();       
 
 	// plugin parameters
-	public double value;
 	public String name;
 
 	/**
@@ -43,6 +67,11 @@ public class Cluster_Ground_Truth_Generation implements PlugInFilter {
 		}
 
 		image = imp;
+                ImageStack stack = image.getStack();
+                interval = stack.getSize();
+                ImageProcessor ip = stack.getProcessor(interval);
+                width = ip.getWidth();
+                height = ip.getHeight();
 		return DOES_8G | DOES_16 | DOES_32 | DOES_RGB;
 	}
 
@@ -51,31 +80,96 @@ public class Cluster_Ground_Truth_Generation implements PlugInFilter {
 	 */
 	@Override
 	public void run(ImageProcessor ip) {
+                
 		// get width and height
-		width = ip.getWidth();
-		height = ip.getHeight();
-
-		if (showDialog()) {
-			process(ip);
-			image.updateAndDraw();
+		//width = ip.getWidth();
+		//height = ip.getHeight();
+                                
+                //set the interval for a cluster
+		while (!intervalSet) {
+                        showDialog();
 		}
+            
+                ImageWindow win = image.getWindow();
+                canvas = win.getCanvas();
+                canvas.addMouseListener(this);
+                
+                //select roi
+                while(!roiSelected){
+                        selectRoi(ip);
+                }
+                
+                Color color = new Color(255,255,255);
+                drawRoi(ip, 5, color);
+                image.updateAndRepaintWindow();
+                
 	}
+        
+        private boolean selectRoi(ImageProcessor ip){
+                //WaitForUserDialog wait_dialog = new WaitForUserDialog("Select a rectangle as region of interest! Then click OK.");
+                //wait_dialog.show();
+                IJ.write("Select rectangle as region of interest: Click on position for upper left corner!");
+                waitForClick();
+                int xRec = clickPoint.x;
+                int yRec = clickPoint.y;
+                IJ.write("Select rectangle as region of interest: Click on position for lower right corner!");
+                waitForClick();
+                int width = clickPoint.x - xRec;
+                int height = clickPoint.y - yRec;
+                if (width < 0 || width>this.width){
+                        IJ.showMessage("Invalid width for rectangle. Annotate a new rectangle!");
+                        return false;
+                }
+                if (height < 0 || height>this.height){
+                        IJ.showMessage("Invalid width for rectangle. Annotate a new rectangle!");
+                        return false;
+                }
+                roi = new Roi(xRec, yRec, width, height);
+                roiSelected = true;
+                return true;
+        }
+        
+        private void drawRoi(ImageProcessor ip, int lineWidth, Color lineColor){
+                if(roiSelected){
+                        ip.setLineWidth(lineWidth);
+                        ip.setColor(lineColor);
+                        ip.draw(roi);
+                } else {
+                        IJ.showMessage("No rectangle found");
+                        selectRoi(ip);
+                        drawRoi(ip, lineWidth, lineColor);
+                }
+        }
+
 
 	private boolean showDialog() {
-		GenericDialog gd = new GenericDialog("Process pixels");
+		GenericDialog gd = new GenericDialog("Assign start and end frame");
 
 		// default value is 0.00, 2 digits right of the decimal point
-		gd.addNumericField("value", 0.00, 2);
-		gd.addStringField("name", "John");
+		gd.addNumericField("start frame", 0, 0);
+		gd.addNumericField("end frame", 0, 0);
 
 		gd.showDialog();
 		if (gd.wasCanceled())
 			return false;
 
 		// get entered values
-		value = gd.getNextNumber();
-		name = gd.getNextString();
-
+		startFrame = (int) gd.getNextNumber();
+		endFrame = (int) gd.getNextNumber();
+                // check that start and end frame in correct range
+                if (startFrame < 0){
+                        IJ.showMessage("start_frame out of allowed range [1," + (interval-1) + "]. Correct the input.");
+                        return false;
+                }
+                if (endFrame > interval){
+                        IJ.showMessage("end_frame out of allowed range [2," + interval + "]. Correct the input." );
+                        return false;
+                }
+                if (startFrame >= endFrame){
+                        IJ.showMessage("start_frame must be smaller than end_frame. Correct the input." );
+                        return false;
+                }
+                intervalSet = true;
 		return true;
 	}
 
@@ -92,6 +186,7 @@ public class Cluster_Ground_Truth_Generation implements PlugInFilter {
 	 *
 	 * @param image the image (possible multi-dimensional)
 	 */
+        /*
 	public void process(ImagePlus image) {
 		// slice numbers start with 1 for historical reasons
 		for (int i = 1; i <= image.getStackSize(); i++)
@@ -157,12 +252,14 @@ public class Cluster_Ground_Truth_Generation implements PlugInFilter {
 			}
 		}
 	}
+        */
 
 	public void showAbout() {
 		IJ.showMessage("ProcessPixels",
 			"a template for processing each pixel of an image"
 		);
 	}
+        
 
 	/**
 	 * Main method for debugging.
@@ -189,4 +286,36 @@ public class Cluster_Ground_Truth_Generation implements PlugInFilter {
 		// run the plugin
 		IJ.runPlugIn(clazz.getName(), "");
 	}
+    
+        public void waitForClick() {
+                while(!click) IJ.wait(300);
+                click = false;
+        }
+
+        //Override methods in MouseListener
+	@Override
+        public void mouseClicked(MouseEvent e) {
+                int x = e.getX();
+                int y = e.getY();
+                int offscreenX = canvas.offScreenX(x);
+                int offscreenY = canvas.offScreenY(y);
+                click = true;
+                clickPoint.x = offscreenX;
+                clickPoint.y = offscreenY;
+                IJ.write("mousePressed: " + offscreenX + ", " + offscreenY );
+        }
+            
+	@Override
+        public void mousePressed(MouseEvent e) {}
+        
+	@Override
+        public void mouseReleased(MouseEvent e) {}
+        
+	@Override
+        public void mouseEntered(MouseEvent e) {}
+
+	@Override
+        public void mouseExited(MouseEvent e) {}
+
+
 }
