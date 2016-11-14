@@ -1,3 +1,19 @@
+This is a plugin for 
+1. setting the boundary conditions for cluster resolving through annotating positions of objects in first and last frame and 
+2. annotating ids to objects in first and last frame for ground truth generation
+
+The name of the plugin is 
+Cluster ground truth generation
+
+The usage of the plugin is self explaning via Message Windows.
+
+The output of the plugin is a json file containing a list of list of integers. The outer list contain one list per annotated cluster in the following format:
+[listCluster1, listCluster2, ...]
+listCluster = [startFrame, endFrame, xCen, yCen, radius, nObjects, xStartObj1, yStartObj1, xEndObj1, xEndObj1, ... ,  xStartObjN, yStartObjN, xEndObjN, xEndObjN ]
+
+
+
+
 This is a minimal Maven project implementing an ImageJ 1.x plugin
 
 It is intended as an ideal starting point to develop new ImageJ 1.x plugins
